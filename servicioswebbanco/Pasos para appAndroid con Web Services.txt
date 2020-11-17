@@ -1,0 +1,371 @@
+
+
+1. Crear los archivos php que permiten realizar el crud (webservices)
+2. Crear app para Login con ActivityMain
+2.1. Cambiar el id del layout por ejemplo: escenario
+2.2. Crear layout fragment (Blank), por ejemplo SesionFragment
+2.2.1. Crear el diseño para login (correo y contraseña)
+2.2.2. Dejar solo el codigo de java que permita hacer solo lo siguiente:
+	 @Override
+    	public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) 
+	{
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.fragment_sesion, container, false);
+    	}
+3. En MainActivity.java poner el siguiente código para usar el fragment como layout
+   de inicio, por ejemplo:
+	//Se permite la utilización del fragment (fragment_sesion)
+        // en el layout con nombre escenario
+        FragmentManager fm = getSupportFragmentManager();
+        fm.beginTransaction().replace(R.id.escenario,new SesionFragment()).commit();
+3.1. Ejecutar desde el emulador....
+4. Especificar en GradleScripts (module) la siguiente dependencia que permita
+   hacer conexiones http:
+	 implementation 'com.android.volley:volley:1.1.1'
+4.1. Hacer clic en Sync now....
+5. En el archivo AndroidManifest.xml, especificar la línea que permite tomar datos
+   de internet:
+	<uses-permission android:name="android.permission.INTERNET"/>
+6.En el archivo fragment (SesionFragment.java) agregar el siguiente codigo implements...
+	public class SesionFragment extends Fragment implements Response.Listener<JSONObject>,Response.ErrorListener{
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.fragment_sesion, container, false);
+    }
+   ....y se genera 2 métodos...onResponse y onErrorResponse ....
+6.1. Agregar los objetos para la conexión... después public class ... por ejemplo,
+
+	public class SesionFragment extends Fragment implements Response.Listener<JSONObject>,Response.ErrorListener{
+    //Definir los objetos que se requieren para la conexión
+    RequestQueue rq;
+    JsonRequest jrq;
+    EditText usr,clave;
+    Button iniciar;
+;    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        //return inflater.inflate(R.layout.fragment_sesion, container, false);
+        View vista = inflater.inflate(R.layout.fragment_sesion,container,false);
+        usr = vista.findViewById(R.id.etusr);
+        clave = vista.findViewById(R.id.etclave);
+        iniciar = vista.findViewById(R.id.btnsesion);
+        rq = Volley.newRequestQueue(getContext());//requerimiento Volley
+        iniciar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                iniciarsesion();
+            }
+        });
+        return vista;
+
+    }
+
+    @Override
+    public void onResponse(JSONObject response) {
+        Toast.makeText(getContext(),"Se ha encontrado el usuario"+usr.getText().toString(),Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onErrorResponse(VolleyError error) {
+        Toast.makeText(getContext(),"No se ha encontrado el usuario"+usr.getText().toString(),Toast.LENGTH_SHORT).show();
+    }
+    public void iniciarsesion()
+    {
+        String url = "http://192.168.1.62/serviciosandroidphp/sesion.php?usr="+usr.getText().toString()+"&clave="+clave.getText().toString();
+        jrq = new JsonObjectRequest(Request.Method.GET,url,null,this,this);
+        rq.add(jrq);
+    }
+}
+6.2. Ejecutar desde el emulador para chequear la validación de los datos ...
+6.3. Crear una clase (java usuario.java), para enviar datos a otra actividad para cuando sea valido el usuario
+     clic derecho en java (carpeta proyecto):
+public class usuario {
+    private String usr,clave,nombre,correo;
+
+    public String getCorreo() {
+        return correo;
+    }
+
+    public void setCorreo(String correo) {
+        this.correo = correo;
+    }
+
+    public String getUsr() {
+
+        return usr;
+    }
+
+    public void setUsr(String usr) {
+        this.usr = usr;
+    }
+
+    public String getClave() {
+        return clave;
+    }
+
+    public void setClave(String clave) {
+        this.clave = clave;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+}
+6.4.en el evento OnResponse .... (SesionFragment.java)
+	public void onResponse(JSONObject response) {
+        //Se utiliza la clase usuario para tomar los campos del arreglo datos del archivo php
+        usuario usua = new usuario();
+        Toast.makeText(getContext(),"Se ha encontrado el usuario "+usr.getText().toString(),Toast.LENGTH_SHORT).show();
+        //datos: arreglo que envía los datos en formato JSON, en el archivo php
+        JSONArray jsonArray = response.optJSONArray("datos");
+        JSONObject jsonObject = null;
+        try {
+            jsonObject = jsonArray.getJSONObject(0);//posición 0 del arreglo....
+            usua.setUsr(jsonObject.optString("usr"));
+            usua.setClave(jsonObject.optString("clave"));
+            usua.setNombre(jsonObject.optString("nombre"));
+            usua.setCorreo(jsonObject.optString("correo"));
+
+        }
+        catch (JSONException e)
+        {
+            e.printStackTrace();
+        }
+        //Intent misesion = new Intent(getContext(),Main2Activity.class);
+        //misesion.putExtra("musr",usr.getText().toString());
+        //startActivity(misesion);
+        Intent intencion = new Intent(getContext(),Main2Activity.class);
+        intencion.putExtra(Main2Activity.nombre,usua.getNombre());
+        startActivity(intencion);
+
+    }
+7. En la actividad que recibe el dato (Main2Activity.java), poner el siguiente código:
+	public class Main2Activity extends AppCompatActivity {
+    public static final String nombre="nombre";
+    TextView rusuario;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main2);
+        rusuario = findViewById(R.id.tvusuario);
+        /*Bundle parametros = this.getIntent().getExtras();
+        if(parametros !=null){
+            String musuario = parametros.getString("musr");
+            rusuario.setText(rusuario.getText().toString()+" "+musuario);
+        }*/
+        String mnombre = getIntent().getStringExtra("nombre");
+        rusuario.setText(rusuario.getText().toString()+" "+mnombre);
+
+    }
+}
+7.1. Ejecutar desde el emulador ... y verificar que se conecta y recupera el nombre del usuario
+8. Crear actividad para registrar usuario:
+8.1. activity_registrar.xml:
+	<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".registrarActivity"
+    android:orientation="vertical"
+    >
+    <TextView
+        android:layout_marginTop="100dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Registro de Usuarios"
+        android:gravity="center_horizontal"
+        />
+    <TextView
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Usuario"
+        android:gravity="center_horizontal"
+        />
+    <EditText
+        android:id="@+id/etuserr"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:hint="p.e. pperez"
+        android:inputType="textEmailAddress"
+        android:gravity="center_horizontal"
+        />
+    <TextView
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nombre"
+        android:gravity="center_horizontal"
+        />
+    <EditText
+        android:id="@+id/etnombrer"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:hint="p.e. Pepe Pérez"
+        android:inputType="textPersonName"
+        android:gravity="center_horizontal"
+        />
+    <TextView
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Correo Electrónico"
+        android:gravity="center_horizontal"
+        />
+    <EditText
+        android:id="@+id/etcorreor"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:hint="p.e. micorreo@gmail.com"
+        android:inputType="textEmailAddress"
+        android:gravity="center_horizontal"
+        />
+    <TextView
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Contraseña"
+        android:gravity="center_horizontal"
+        />
+    <EditText
+        android:id="@+id/etclaver"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:hint="Contraseña"
+        android:inputType="textPassword"
+        android:gravity="center_horizontal"
+        />
+    <Button
+        android:layout_marginTop="20dp"
+        android:id="@+id/btnregistrarr"
+        android:layout_height="wrap_content"
+        android:layout_width="200dp"
+        android:text="Registrar"
+        android:layout_gravity="center_horizontal"
+        />
+    <Button
+        android:layout_marginTop="20dp"
+        android:id="@+id/btnregresarr"
+        android:layout_height="wrap_content"
+        android:layout_width="200dp"
+        android:text="Regresar"
+        android:layout_gravity="center_horizontal"
+        />
+</LinearLayout>
+8.2 registrarActivity.java:
+
+	package com.example.appwservicesphp;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class registrarActivity extends AppCompatActivity {
+    EditText usr,nombre,correo,clave;
+    Button registrarr,regresarr;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_registrar);
+        usr = findViewById(R.id.etuserr);
+        nombre = findViewById(R.id.etnombrer);
+        correo = findViewById(R.id.etcorreor);
+        clave = findViewById(R.id.etclaver);
+        registrarr = findViewById(R.id.btnregistrarr);
+        regresarr = findViewById(R.id.btnregresarr);
+        registrarr.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                registrarusuario();
+            }
+        });
+        regresarr.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //Limpiar datos de la actividad que se invoca
+                Intent i1=new Intent(getApplicationContext(),MainActivity.class);
+                i1.setAction(Intent.ACTION_MAIN);
+                i1.addCategory(Intent.CATEGORY_HOME);
+                i1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                i1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                i1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(i1);
+                finish();
+            }
+        });
+
+    }
+
+    private void registrarusuario() {
+        String url = "http://192.168.1.2:8080/servicioswebandroidphp/registrocorreo.php";
+        StringRequest postRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>()
+                {
+                    @Override
+                    public void onResponse(String response) {
+                        Toast.makeText(getApplicationContext(), "Registro de usuario realizado correctamente!", Toast.LENGTH_LONG).show();
+                    }
+                },
+                new Response.ErrorListener()
+                {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(getApplicationContext(), "Registro de usuario incorrecto!", Toast.LENGTH_LONG).show();
+                    }
+                }
+        ) {
+            @Override
+            protected Map<String, String> getParams()
+            {
+                Map<String, String>  params = new HashMap<String, String>();
+                params.put("usr",usr.getText().toString().trim());
+                params.put("nombre", nombre.getText().toString().trim());
+                params.put("correo",correo.getText().toString().trim());
+                params.put("clave",clave.getText().toString().trim());
+                return params;
+            }
+        };
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(postRequest);
+    }
+
+   //https://www.itsalif.info/content/android-volley-tutorial-http-get-post-put
+
+}
+8.3. Chequear la ejecución en emulador....
+
+
